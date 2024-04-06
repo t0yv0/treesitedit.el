@@ -207,7 +207,33 @@ P is the starting position"
     x))
 
 
+;;;; Marking
+
+
+(defun treesitedit-mark-sexp (&optional arg)
+  "Mark and select the current node around point.
+
+If region is active, extend the selection.
+
+Use `exchange-point-and-mark' (bound to C-x C-x by default) to
+reverse the direction in which selection is growing.
+
+Inspired by meow-edit/meow and magnars/expand-region.
+"
+  (interactive "P")
+  (cond
+   ((region-active-p)
+    (if (> (point) (mark))
+        (treesitedit-forward)
+      (treesitedit-backward)))
+   (t
+    (let ((n (t0yv0/treesit-topmost-node (point))))
+      (set-mark (treesit-node-start n))
+      (goto-char (treesit-node-end n))))))
+
+
 ;;;; Mode definition
+
 
 (defvar treesitedit-mode-map
   (let ((m (make-sparse-keymap)))
@@ -216,7 +242,8 @@ P is the starting position"
     (define-key m (kbd "C-M-u") #'treesitedit-backward-up)
     (define-key m (kbd "C-M-d") #'treesitedit-forward-down)
     (define-key m (kbd "C-M-p") #'treesitedit-backward-down)
-    (define-key m (kbd "C-M-n") #'treesitedit-forward-up))
+    (define-key m (kbd "C-M-n") #'treesitedit-forward-up)
+    (define-key m (kbd "<remap> <mark-sexp>") #'treesitedit-mark-sexp))
   "Keymap for the treesitedit minor mode.")
 
 
