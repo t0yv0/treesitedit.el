@@ -203,23 +203,23 @@ P is the starting position"
 
 
 (defun treesitedit--topmost-node-starting-at (pos)
-  "Finds the top-most node starting at POS position."
-  (let ((x (treesit-node-at pos)))
-    (while (let ((p (treesit-node-parent x)))
-             (and p (equal (treesit-node-start p)
-                           (treesit-node-start x))))
-      (setq x (treesit-node-parent x)))
-    x))
+  "Finds the top-most node starting at POS position.
+
+If none is found, returns the current node at POS."
+  (or (treesit-parent-while (treesit-node-at pos)
+                            (lambda (p)
+                              (equal (treesit-node-start p) pos)))
+      (treesit-node-at pos)))
 
 
 (defun treesitedit--topmost-node-ending-at (pos)
-  "Finds the top-most node starting at POS position."
-  (let ((x (treesit-node-at pos)))
-    (while (let ((p (treesit-node-parent x)))
-             (and p (equal (treesit-node-end p)
-                           (treesit-node-end x))))
-      (setq x (treesit-node-parent x)))
-    x))
+  "Finds the top-most node ending at POS position.
+
+If none is found, returns the current node at POS."
+  (or (treesit-parent-while (treesit-node-at pos)
+                            (lambda (p)
+                              (equal (treesit-node-end p) pos)))
+      (treesit-node-at pos)))
 
 
 ;;;; Marking
