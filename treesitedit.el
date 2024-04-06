@@ -207,5 +207,25 @@ P is the starting position"
     x))
 
 
+;;;; Mode definition
+
+(defvar treesitedit-mode-map
+  (let ((m (make-sparse-keymap)))
+    (define-key m (kbd "C-M-f") #'treesitedit-forward)
+    (define-key m (kbd "C-M-b") #'treesitedit-backward)
+    (define-key m (kbd "C-M-u") #'treesitedit-backward-up)
+    (define-key m (kbd "C-M-d") #'treesitedit-forward-down)
+    (define-key m (kbd "C-M-p") #'treesitedit-backward-down)
+    (define-key m (kbd "C-M-n") #'treesitedit-forward-up))
+  "Keymap for the treesitedit minor mode.")
+
+
+;;;###autoload
+(define-minor-mode treesitedit-mode
+  "Minor mode for enabling Paredit-like movement commands for
+buffers that use treesitter to accurately understand the
+language-specific parse tree." )
+
+
 (provide 'treesitedit)
 ;;; treesitedit.el ends here
