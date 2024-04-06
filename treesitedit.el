@@ -163,7 +163,7 @@ P is the starting position"
   (let ((n node)
         (r 0))
     (while n
-      (setq n (treesit-node-parent node))
+      (setq n (treesit-node-parent n))
       (setq r (+ 1 r)))
     r))
 
