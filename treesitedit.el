@@ -228,7 +228,7 @@ Inspired by meow-edit/meow and magnars/expand-region."
         (treesitedit-forward)
       (treesitedit-backward)))
    (t
-    (let ((n (t0yv0/treesit-topmost-node (point))))
+    (let ((n (treesitedit--topmost-node (point))))
       (set-mark (treesit-node-start n))
       (goto-char (treesit-node-end n))))))
 
