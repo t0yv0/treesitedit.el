@@ -113,7 +113,8 @@ P is the starting position"
          (forward (not backward))
          (down (< vertical-direction 0))
          (up (not down))
-         (n (treesitedit--topmost-node p)))
+         (n (treesitedit--topmost-node p))
+         (l0 (treesitedit--node-level n)))
     (cond
      ((and backward up)
       ;; simply go to the start of the parent node
@@ -122,20 +123,26 @@ P is the starting position"
       ;; simply go to the end of the parent node
       (treesit-node-end (or (treesit-node-parent n) n)))
      ((and forward down)
-      ;; search self and next siblings for children
+      ;; search self and next siblings for a suitable descendant
       (let ((nn (seq-find
-                 (lambda (c) (> (treesit-node-start c) p))
+                 (lambda (c) (and (> (treesit-node-start c) p)
+                                  (> (treesitedit--node-level c) l0)
+                                  (not (treesitedit--skipped-node-p c))))
                  (seq-mapcat #'treesitedit--node-with-descendants
                              (treesitedit--node-with-next-siblings n)))))
         (if nn (treesit-node-start nn)
           (error "forward down motion found no suitable nodes"))))
      ((and backward down)
-      ;; go backward by sibling until one with children, then go to the end of the last child
-      (while (and n (not (and (> (treesit-node-child-count n) 0)
-                              (< (treesit-node-end (treesit-node-child n -1)) p))))
-        (setq n (treesit-node-prev-sibling n)))
-      (if n (treesit-node-end (treesit-node-child n -1))
-        (error "backward down motion found no suitable nodes"))))))
+      ;; search self and previous siblings for a suitable descendant
+      (let ((nn (seq-find
+                 (lambda (c) (and (< (treesit-node-start c) p)
+                                  (> (treesitedit--node-level c) l0)
+                                  (not (treesitedit--skipped-node-p c))))
+                 (seq-mapcat (lambda (c)
+                               (treesitedit--node-with-descendants c 'backward))
+                             (treesitedit--node-with-prev-siblings n)))))
+        (if nn (treesit-node-start nn)
+          (error "backward down motion found no suitable nodes")))))))
 
 
 ;;;; Skipped nodes
@@ -149,12 +156,24 @@ P is the starting position"
 ;;;; Extending treesit stdlib
 
 
-(defun treesitedit--node-with-descendants (node)
+(defun treesitedit--node-level (node)
+  "How deep is this node in the hierarchy."
+  (let ((n node)
+        (r 0))
+    (while n
+      (setq n (treesit-node-parent node))
+      (setq r (+ 1 r)))
+    r))
+
+
+(defun treesitedit--node-with-descendants (node &optional backward)
   "Return a list including NODE and all descendants."
   (let ((r (list)))
-    (treesit-search-subtree node (lambda (c)
-                                   (setq r (cons c r))
-                                   nil))
+    (treesit-search-subtree node
+                            (lambda (c)
+                              (setq r (cons c r))
+                              nil)
+                            backward)
     (reverse r)))
 
 
@@ -165,6 +184,16 @@ P is the starting position"
     (while n
       (setq r (cons n r))
       (setq n (treesit-node-next-sibling n)))
+    (reverse r)))
+
+
+(defun treesitedit--node-with-prev-siblings (node)
+  "Return a list including NODE and all preceding siblings."
+  (let ((n node)
+        (r (list)))
+    (while n
+      (setq r (cons n r))
+      (setq n (treesit-node-prev-sibling n)))
     (reverse r)))
 
 
