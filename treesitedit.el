@@ -218,8 +218,7 @@ If region is active, extend the selection.
 Use `exchange-point-and-mark' (bound to C-x C-x by default) to
 reverse the direction in which selection is growing.
 
-Inspired by meow-edit/meow and magnars/expand-region.
-"
+Inspired by meow-edit/meow and magnars/expand-region."
   (interactive "P")
   (cond
    ((region-active-p)
