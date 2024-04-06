@@ -41,7 +41,7 @@ Behave like `treesitedit-backward' if ARG is negative."
 
 
 (defun treesitedit--move-backward (p)
-  (let* ((n (treesitedit--topmost-node p)))
+  (let* ((n (treesitedit--topmost-node-ending-at p)))
     (while (and n (or (>= (treesit-node-start n) p)
                       (treesitedit--skipped-node-p n)))
       (setq n (or (treesit-node-prev-sibling n)
@@ -50,7 +50,7 @@ Behave like `treesitedit-backward' if ARG is negative."
 
 
 (defun treesitedit--move-forward (p)
-  (let* ((n (treesitedit--topmost-node p)))
+  (let* ((n (treesitedit--topmost-node-starting-at p)))
     (while (and n (or (<= (treesit-node-end n) p)
                       (treesitedit--skipped-node-p n)))
       (setq n (or (treesit-node-next-sibling n)
@@ -115,7 +115,10 @@ P is the starting position"
          (forward (not backward))
          (down (< vertical-direction 0))
          (up (not down))
-         (n (treesitedit--topmost-node p))
+         (n (funcall (if forward
+                         #'treesitedit--topmost-node-starting-at
+                       #'treesitedit--topmost-node-ending-at)
+                     p))
          (l0 (treesitedit--node-level n)))
     (cond
      ((and backward up)
@@ -199,12 +202,22 @@ P is the starting position"
     (reverse r)))
 
 
-(defun treesitedit--topmost-node (pos)
-  "Finds the top-most node at POS position."
+(defun treesitedit--topmost-node-starting-at (pos)
+  "Finds the top-most node starting at POS position."
   (let ((x (treesit-node-at pos)))
     (while (let ((p (treesit-node-parent x)))
              (and p (equal (treesit-node-start p)
                            (treesit-node-start x))))
+      (setq x (treesit-node-parent x)))
+    x))
+
+
+(defun treesitedit--topmost-node-ending-at (pos)
+  "Finds the top-most node starting at POS position."
+  (let ((x (treesit-node-at pos)))
+    (while (let ((p (treesit-node-parent x)))
+             (and p (equal (treesit-node-end p)
+                           (treesit-node-end x))))
       (setq x (treesit-node-parent x)))
     x))
 
@@ -228,7 +241,10 @@ Inspired by meow-edit/meow and magnars/expand-region."
         (treesitedit-forward)
       (treesitedit-backward)))
    (t
-    (let ((n (treesitedit--topmost-node (point))))
+    (let ((n (funcall (if (> (point) (mark))
+                          #'treesitedit--topmost-node-starting-at
+                        #'treesitedit--topmost-node-ending-at)
+                      (point))))
       (set-mark (treesit-node-start n))
       (goto-char (treesit-node-end n))))))
 
