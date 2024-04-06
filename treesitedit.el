@@ -1,5 +1,7 @@
 ;;; treesitedit.el --- Paredit-inspired navigation on top of treesitter.
 ;;;
+;;; Version: 1
+;;;
 ;;; Commentary:
 ;;;
 ;;; Code:
