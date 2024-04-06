@@ -255,7 +255,8 @@ Inspired by meow-edit/meow and magnars/expand-region."
     (define-key m (kbd "C-M-p") #'treesitedit-backward-down)
     (define-key m (kbd "C-M-n") #'treesitedit-forward-up)
     (define-key m (kbd "<remap> <kill-sexp>") #'treesitedit-kill-sexp)
-    (define-key m (kbd "<remap> <mark-sexp>") #'treesitedit-mark-sexp))
+    (define-key m (kbd "<remap> <mark-sexp>") #'treesitedit-mark-sexp)
+    m)
   "Keymap for the treesitedit minor mode.")
 
 
