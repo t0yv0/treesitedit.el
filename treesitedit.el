@@ -231,6 +231,16 @@ Inspired by meow-edit/meow and magnars/expand-region."
       (goto-char (treesit-node-end n))))))
 
 
+;;;; Killing (terrible legacy Emacs term)
+
+
+(defun treesitedit-kill-sexp (&optional arg)
+  (interactive "P")
+  (let ((p0 (point)))
+    (treesitedit-forward (or arg 1))
+    (kill-region p0 (point))))
+
+
 ;;;; Mode definition
 
 
@@ -242,6 +252,7 @@ Inspired by meow-edit/meow and magnars/expand-region."
     (define-key m (kbd "C-M-d") #'treesitedit-forward-down)
     (define-key m (kbd "C-M-p") #'treesitedit-backward-down)
     (define-key m (kbd "C-M-n") #'treesitedit-forward-up)
+    (define-key m (kbd "<remap> <kill-sexp>") #'treesitedit-kill-sexp)
     (define-key m (kbd "<remap> <mark-sexp>") #'treesitedit-mark-sexp))
   "Keymap for the treesitedit minor mode.")
 
