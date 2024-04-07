@@ -21,7 +21,7 @@ Following paredit three motion pairs are available:
 2. Moving back and up out of nodes and forward down into nodes:
 
     ```
-    C-M-u treesitedit-backward-up      C-m-d treesitedit-forward-down
+    C-M-u treesitedit-backward-up      C-M-d treesitedit-forward-down
     ```
 
 3. Moving forward and out of nodes and backwards down into nodes. These are slightly less intuitive but appear useful.
