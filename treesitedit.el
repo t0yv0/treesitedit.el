@@ -114,38 +114,49 @@ P is the starting position"
   (let* ((backward (< horiz-direction 0))
          (forward (not backward))
          (down (< vertical-direction 0))
-         (up (not down))
-         (n (funcall (if forward
-                         #'treesitedit--topmost-node-starting-at
-                       #'treesitedit--topmost-node-ending-at)
-                     p))
-         (l0 (treesitedit--node-level n)))
+         (up (not down)))
     (cond
      ((and backward up)
       ;; simply go to the start of the parent node
-      (treesit-node-start (or (treesit-node-parent n) n)))
+      (let ((node0 (treesitedit--topmost-node-starting-at p)))
+        (treesit-node-start
+         (treesit-parent-until
+          node0
+          (lambda (c) (< (treesit-node-start c)
+                         (treesit-node-start node0)))
+          'include-node0))))
      ((and forward up)
       ;; simply go to the end of the parent node
-      (treesit-node-end (or (treesit-node-parent n) n)))
+      (let ((node0 (treesitedit--topmost-node-ending-at p)))
+        (treesit-node-end
+         (treesit-parent-until
+          node0
+          (lambda (c) (> (treesit-node-end c)
+                         (treesit-node-end node0)))
+          'include-node0))))
      ((and forward down)
       ;; search self and next siblings for a suitable descendant
-      (let ((nn (seq-find
-                 (lambda (c) (and (> (treesit-node-start c) p)
-                                  (> (treesitedit--node-level c) l0)
-                                  (not (treesitedit--skipped-node-p c))))
-                 (seq-mapcat #'treesitedit--node-with-descendants
-                             (treesitedit--node-with-next-siblings n)))))
+      (let* ((node0 (treesitedit--topmost-node-starting-or-ending-at p))
+             (level0 (treesitedit--node-level node0))
+             (nn (seq-find
+                  (lambda (c) (and (> (treesit-node-start c) p)
+                                   (> (treesitedit--node-level c) level0)
+                                   (not (treesitedit--skipped-node-p c))))
+                  (seq-mapcat #'treesitedit--node-with-descendants
+                              (treesitedit--node-with-next-siblings node0)))))
         (if nn (treesit-node-start nn)
           (error "forward down motion found no suitable nodes"))))
      ((and backward down)
       ;; search self and previous siblings for a suitable descendant
-      (let ((nn (seq-find
-                 (lambda (c) (and (< (treesit-node-start c) p)
-                                  (> (treesitedit--node-level c) l0)
-                                  (not (treesitedit--skipped-node-p c))))
-                 (seq-mapcat (lambda (c)
-                               (treesitedit--node-with-descendants c 'backward))
-                             (treesitedit--node-with-prev-siblings n)))))
+      (let* ((node0 (treesitedit--topmost-node-starting-or-ending-at p))
+             (level0 (treesitedit--node-level node0))
+             (nn (seq-find
+                  (lambda (c) (and (< (treesit-node-start c) p)
+                                   (> (treesitedit--node-level c) level0)
+                                   (not (treesitedit--skipped-node-p c))))
+                  (seq-mapcat (lambda (c)
+                                (treesitedit--node-with-descendants c 'backward))
+                              (treesitedit--node-with-prev-siblings node0)))))
         (if nn (treesit-node-start nn)
           (error "backward down motion found no suitable nodes")))))))
 
@@ -219,6 +230,18 @@ If none is found, returns the current node at POS."
   (or (treesit-parent-while (treesit-node-at pos)
                             (lambda (p)
                               (equal (treesit-node-end p) pos)))
+      (treesit-node-at pos)))
+
+
+(defun treesitedit--topmost-node-starting-or-ending-at (pos)
+  "Finds the top-most node starting or ending at POS position.
+
+If none is found, returns the current node at POS."
+  (or (treesit-parent-while (treesit-node-at pos)
+                            (lambda (p)
+                              (or
+                               (equal (treesit-node-start p) pos)
+                               (equal (treesit-node-end p) pos))))
       (treesit-node-at pos)))
 
 
