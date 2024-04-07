@@ -4,9 +4,7 @@
 
 This package under development. The author is using this for editing Go with some occasional TypeScript and Python.
 
-If you are looking for something more mature:
-
-- [mickeynp/combobulate](https://github.com/mickeynp/combobulate)
+If you are looking for something more mature, try [mickeynp/combobulate](https://github.com/mickeynp/combobulate).
 
 ## Usage
 
@@ -16,16 +14,22 @@ Following paredit three motion pairs are available:
 
 1. Moving over nodes forward and backward:
 
+    ```
     C-M-b treesitedit-backward         C-M-f treesitedit-forward
+    ```
 
 2. Moving back and up out of nodes and forward down into nodes:
 
+    ```
     C-M-u treesitedit-backward-up      C-m-d treesitedit-forward-down
+    ```
 
 3. Moving forward and out of nodes and backwards down into nodes. These are slightly less intuitive but appear useful.
    Following paredit these replace the traditional Emacs bindings for forward-list and backward-list:
 
+    ```
     C-M-p treesitedit-backward-down    C-M-n treesitedit-forward-up
+    ```
 
 The key design difficulty for languages like Go is that unlike in LISP, a single buffer position corresponds to multiple
 nodes. For example, having point at the `f` of `func` has several overlapping nodes such as the `func` literal and the
