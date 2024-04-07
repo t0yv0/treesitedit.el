@@ -1,11 +1,7 @@
 {
   inputs = {
     nixpkgs.url = github:NixOS/nixpkgs/nixos-23.11;
-    # nixpkgs_22_11.url = github:NixOS/nixpkgs/22.11;
     nixpkgs_darwin.url = github:NixOS/nixpkgs/nixpkgs-23.11-darwin;
-    # copilot_flake.url = github:t0yv0/copilot.el/v20240323;
-    # dape_src.url = github:svaante/dape?rev=d1a96de51cbee7c410d1f2680f860d09048e2fc5;
-    # dape_src.flake = false;
   };
 
   outputs = { self, nixpkgs, nixpkgs_darwin }: let
@@ -15,9 +11,6 @@
     packages = nixpkgs: sys: emacs-flavor: let
       pkgs = import nixpkgs { system = sys; };
       epkgs = pkgs.emacsPackagesFor (emacs-flavor pkgs);
-      # treesitter = pkgs.tree-sitter.withPlugins (_: pkgs.tree-sitter.allGrammars);
-      # mermaid = pkgs_22_11.nodePackages.mermaid-cli;
-      # copilot = (builtins.getAttr sys copilot_flake.packages).default;
 
       treesitedit = epkgs.elpaBuild {
         pname = "treesitedit";
