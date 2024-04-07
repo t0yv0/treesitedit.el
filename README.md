@@ -33,8 +33,8 @@ Following paredit three motion pairs are available:
 
 The key design difficulty for languages like Go is that unlike in LISP, a single buffer position corresponds to multiple
 nodes. For example, having point at the `f` of `func` has several overlapping nodes such as the `func` literal and the
-entire function definition. The motion commands guess which node to operate on, generally picking the mode with the
-widest extent.
+entire function definition. The motion commands takes a guess which node to operate on, generally picking the mode with
+the widest extent.
 
 ### Marking
 
