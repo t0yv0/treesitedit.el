@@ -2,7 +2,7 @@
 
 [Paredit](https://paredit.org) inspired navigation on top of treesitter.
 
-This package under development. The author is using this for editing Go with some occasional TypeScript and Python.
+This package is under development. The author is using it for editing Go with some occasional TypeScript and Python.
 
 If you are looking for something more mature, try [mickeynp/combobulate](https://github.com/mickeynp/combobulate).
 
