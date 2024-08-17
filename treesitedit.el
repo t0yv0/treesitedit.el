@@ -1,4 +1,4 @@
-;;; treesitedit.el --- Paredit-inspired navigation on top of treesitter.
+;;; treesitedit.el --- Paredit-inspired navigation on top of treesitter.  -*- lexical-binding:t -*-
 ;;;
 ;;; Version: 1
 ;;;
@@ -7,6 +7,39 @@
 ;;; Code:
 
 (require 'treesit)
+
+;;;; State: current node
+
+;;;;; Non-LISP languages may have several nodes starting at the same point, and walking the node tree up and down may
+;;;;; not be moving point. State is needed to track which node at point is considered to be the current node.
+
+
+(defvar treesitedit--current-node-state nil
+  "Current node or NIL.")
+
+
+(defun treesitedit--current-node ()
+  "Determine the current node at POINT."
+  (unless (treesitedit--got-current-node-p)
+    (setq treesitedit--current-node-state (treesitedit--topmost-node-starting-at (point))))
+  treesitedit--current-node-state)
+
+
+(defun treesitedit--set-current-node (node)
+  "Set NODE as the current node."
+  (setq treesitedit--current-node-state node)
+  (pulse-momentary-highlight-region
+     (treesit-node-start node)
+     (treesit-node-end node)))
+
+
+(defun treesitedit--got-current-node-p ()
+  "Check if there is an active current node."
+  (condition-case nil
+      (and treesitedit--current-node-state
+           (or (equal (treesit-node-start treesitedit--current-node-state) (point))
+               (equal (treesit-node-end treesitedit--current-node-state) (point))))
+    (error nil)))
 
 
 ;;;; Motion: forward and backward
@@ -19,9 +52,7 @@ Repeat ARG times.
 
 Behave like `treesitedit-forward' if ARG is negative."
   (interactive "P")
-  (let ((n (or arg 1)))
-    (cond ((< 0 n) (dotimes (i n)     (treesitedit--move #'treesitedit--move-backward)))
-          ((< n 0) (dotimes (i (- n)) (treesitedit--move #'treesitedit--move-forward))))))
+  (treesitedit--move (- (or arg 1))))
 
 
 (defun treesitedit-forward (&optional arg)
@@ -31,190 +62,134 @@ Repeat ARG times.
 
 Behave like `treesitedit-backward' if ARG is negative."
   (interactive "P")
-  (let ((n (or arg 1)))
-    (cond ((< 0 n) (dotimes (i n)     (treesitedit--move #'treesitedit--move-forward)))
-          ((< n 0) (dotimes (i (- n)) (treesitedit--move #'treesitedit--move-backward))))))
+  (treesitedit--move (or arg 1)))
 
 
-(defun treesitedit--move (fn)
-  (goto-char (funcall fn (point))))
+(defun treesitedit--move (dx)
+  "Move forward if DX is positive and backward otherwise.
+
+Repeat (abs DX) times."
+  (let ((cn (treesitedit--current-node))
+        (nn nil))
+    (dotimes (_ (abs dx))
+      (setq nn (treesitedit--node-move cn dx))
+      (when nn
+        (setq cn nn)
+        (goto-char
+         (if (< dx 0)
+             (treesit-node-start cn)
+           (treesit-node-end cn)))))
+    (treesitedit--set-current-node cn)))
 
 
-(defun treesitedit--move-backward (p)
-  (let* ((n (treesitedit--topmost-node-ending-at p)))
-    (while (and n (or (>= (treesit-node-start n) p)
-                      (treesitedit--skipped-node-p n)))
-      (setq n (or (treesit-node-prev-sibling n)
-                  (treesit-node-parent n))))
-    (when n (treesit-node-start n))))
+(defun treesitedit--node-move (node dx)
+  "Compute the next node after NODE in DX direction."
+  (if (> dx 0)
+      (or
+       (and (> (treesit-node-end node) (point)) node)
+       (treesit-node-next-sibling node)
+       (treesit-node-parent node))
+    (or
+     (and (< (treesit-node-start node) (point)) node)
+     (treesit-node-prev-sibling node)
+     (treesit-node-parent node))))
 
 
-(defun treesitedit--move-forward (p)
-  (let* ((n (treesitedit--topmost-node-starting-at p)))
-    (while (and n (or (<= (treesit-node-end n) p)
-                      (treesitedit--skipped-node-p n)))
-      (setq n (or (treesit-node-next-sibling n)
-                  (treesit-node-parent n))))
-    (when n (treesit-node-end n))))
+;;;; Motion: diagonals
 
-
-;;;; Motion: up and down
+;;;;; This style of motion is inspired by `paredit'. See http://danmidwood.com/content/2014/11/21/animated-paredit.html
+;;;;; for useful animations to visualize diagonal motion.
 
 
 (defun treesitedit-backward-down (&optional argument)
   "Move backward down into a node.
-With a positive argument, move backward down that many levels.
-With a negative argument, move forward down that many levels."
+With a positive ARGUMENT, move backward down that many levels.
+With a negative ARGUMENT, move forward down that many levels."
   (interactive "P")
-  (goto-char (treesitedit--up-down (- 0 (or argument +1)) -1 (point))))
+  (treesitedit--up-down (- 0 (or argument +1)) -1))
 
 
 (defun treesitedit-backward-up (&optional argument)
   "Move backward up out of the enclosing node.
-With a positive argument, move backward up that many levels.
-With a negative argument, move forward up that many levels.
-If in a string initially, that counts as one level."
+With a positive ARGUMENT, move backward up that many levels.
+With a negative ARGUMENT, move forward up that many levels."
   (interactive "P")
-  (goto-char (treesitedit--up-down (- 0 (or argument +1)) +1 (point))))
+  (treesitedit--up-down (- 0 (or argument +1)) +1))
 
 
 (defun treesitedit-forward-down (&optional argument)
   "Move forward down into a node.
-With a positive argument, move forward down that many levels.
-With a negative argument, move backward down that many levels."
+With a positive ARGUMENT, move forward down that many levels.
+With a negative ARGUMENT, move backward down that many levels."
   (interactive "P")
-  (goto-char (treesitedit--up-down (or argument +1) -1 (point))))
+  (treesitedit--up-down (or argument +1) -1))
 
 
 (defun treesitedit-forward-up (&optional argument)
   "Move forward up out of the enclosing node.
-With a positive argument, move forward up that many levels.
-With a negative argument, move backward up that many levels.
-If in a string initially, that counts as one level."
+With a positive ARGUMENT, move forward up that many levels.
+With a negative ARGUMENT, move backward up that many levels."
   (interactive "P")
-  (goto-char (treesitedit--up-down (or argument +1) +1 (point))))
+  (treesitedit--up-down (or argument +1) +1))
 
 
-(defun treesitedit--up-down (signed-levels vertical-direction p)
-  "Calculate target position for motions inspired by `paredit'.
+(defun treesitedit--up-down (signed-levels vertical-direction)
+  "Move point diagonally.
 
 SIGNED-LEVELS tells how many levels to go up or down, sign
 indicates forward or back.
 
-VERTICAL-DIRECTION tells to down if negative, up if positive.
-
-P is the starting position"
-  (let ((levels (abs signed-levels)))
-    (dotimes (j levels)
-      (setq p (treesitedit--up-down-step signed-levels vertical-direction p)))
-    p))
-
-
-(defun treesitedit--up-down-step (horiz-direction vertical-direction p)
-  (let* ((backward (< horiz-direction 0))
-         (forward (not backward))
-         (down (< vertical-direction 0))
-         (up (not down)))
-    (cond
-     ((and backward up)
-      ;; simply go to the start of the parent node
-      (let ((node0 (treesitedit--topmost-node-starting-at p)))
-        (treesit-node-start
-         (treesit-parent-until
-          node0
-          (lambda (c) (< (treesit-node-start c)
-                         (treesit-node-start node0)))
-          'include-node0))))
-     ((and forward up)
-      ;; simply go to the end of the parent node
-      (let ((node0 (treesitedit--topmost-node-ending-at p)))
-        (treesit-node-end
-         (treesit-parent-until
-          node0
-          (lambda (c) (> (treesit-node-end c)
-                         (treesit-node-end node0)))
-          'include-node0))))
-     ((and forward down)
-      ;; search self and next siblings for a suitable descendant
-      (let* ((node0 (treesitedit--topmost-node-starting-or-ending-at p))
-             (level0 (treesitedit--node-level node0))
-             (nn (seq-find
-                  (lambda (c) (and (> (treesit-node-start c) p)
-                                   (> (treesitedit--node-level c) level0)
-                                   (not (treesitedit--skipped-node-p c))))
-                  (seq-mapcat #'treesitedit--node-with-descendants
-                              (treesitedit--node-with-next-siblings node0)))))
-        (if nn (treesit-node-start nn)
-          (error "forward down motion found no suitable nodes"))))
-     ((and backward down)
-      ;; search self and previous siblings for a suitable descendant
-      (let* ((node0 (treesitedit--topmost-node-starting-or-ending-at p))
-             (level0 (treesitedit--node-level node0))
-             (nn (seq-find
-                  (lambda (c) (and (< (treesit-node-start c) p)
-                                   (> (treesitedit--node-level c) level0)
-                                   (not (treesitedit--skipped-node-p c))))
-                  (seq-mapcat (lambda (c)
-                                (treesitedit--node-with-descendants c 'backward))
-                              (treesitedit--node-with-prev-siblings node0)))))
-        (if nn (treesit-node-start nn)
-          (error "backward down motion found no suitable nodes")))))))
+VERTICAL-DIRECTION tells to go down if negative, up if positive."
+  (let ((dx (if (> signed-levels 0) +1 -1))
+        (dy (if (< vertical-direction 0) +1 -1))
+        (cn (treesitedit--current-node))
+        (nn nil))
+    (dotimes (_ (abs signed-levels))
+      (setq nn (treesitedit--diagonal-node-move cn dx dy))
+      (when nn
+        (setq cn nn)))
+    (goto-char
+     (if (equal dx dy)
+         (treesit-node-start cn)
+       (treesit-node-end cn)))
+    (treesitedit--set-current-node cn)))
 
 
-;;;; Skipped nodes
+(defun treesitedit--diagonal-node-move (node dx dy)
+  "Move diagonally starting with NODE.
+
+Return the next node in the given direction, or NIL.
+
+Positive DX: forward, negative: backward.
+
+Positive DY: down, negative: up."
+  (let ((n node) (moving t) (nn nil) (fn nil))
+    (while moving
+      ;; try to move vertically
+      (setq nn (if (> dy 0)
+                   (treesit-node-child n (if (> dx 0) 0 -1))
+                 (treesit-node-parent n)))
+      ;; success terminates the loop
+      (when nn
+        (setq fn nn)
+        (setq moving nil))
+      (when moving
+        ;; try to move horizontally
+        (setq nn (if (> dx 0)
+                     (treesit-node-next-sibling n)
+                   (treesit-node-prev-sibling n)))
+        ;; failure terminates the loop
+        (when (not nn)
+          (setq moving nil)))
+      (setq n nn))
+    fn))
 
 
-(defun treesitedit--skipped-node-p (n)
-  (not (null (string-match-p (rx string-start (* (or space "\n")) string-end)
-                             (treesit-node-text n)))))
-
-
-;;;; Extending treesit stdlib
-
-
-(defun treesitedit--node-level (node)
-  "How deep is this node in the hierarchy."
-  (let ((n node)
-        (r 0))
-    (while n
-      (setq n (treesit-node-parent n))
-      (setq r (+ 1 r)))
-    r))
-
-
-(defun treesitedit--node-with-descendants (node &optional backward)
-  "Return a list including NODE and all descendants."
-  (let ((r (list)))
-    (treesit-search-subtree node
-                            (lambda (c)
-                              (setq r (cons c r))
-                              nil)
-                            backward)
-    (reverse r)))
-
-
-(defun treesitedit--node-with-next-siblings (node)
-  "Return a list including NODE and all subsequent siblings."
-  (let ((n node)
-        (r (list)))
-    (while n
-      (setq r (cons n r))
-      (setq n (treesit-node-next-sibling n)))
-    (reverse r)))
-
-
-(defun treesitedit--node-with-prev-siblings (node)
-  "Return a list including NODE and all preceding siblings."
-  (let ((n node)
-        (r (list)))
-    (while n
-      (setq r (cons n r))
-      (setq n (treesit-node-prev-sibling n)))
-    (reverse r)))
+;;;; Point to current node
 
 
 (defun treesitedit--topmost-node-starting-at (pos)
-  "Finds the top-most node starting at POS position.
+  "Find the top-most node starting at POS position.
 
 If none is found, returns the current node at POS."
   (or (treesit-parent-while (treesit-node-at pos)
@@ -223,48 +198,26 @@ If none is found, returns the current node at POS."
       (treesit-node-at pos)))
 
 
-(defun treesitedit--topmost-node-ending-at (pos)
-  "Finds the top-most node ending at POS position.
-
-If none is found, returns the current node at POS."
-  (or (treesit-parent-while (treesit-node-at pos)
-                            (lambda (p)
-                              (equal (treesit-node-end p) pos)))
-      (treesit-node-at pos)))
-
-
-(defun treesitedit--topmost-node-starting-or-ending-at (pos)
-  "Finds the top-most node starting or ending at POS position.
-
-If none is found, returns the current node at POS."
-  (or (treesit-parent-while (treesit-node-at pos)
-                            (lambda (p)
-                              (or
-                               (equal (treesit-node-start p) pos)
-                               (equal (treesit-node-end p) pos))))
-      (treesit-node-at pos)))
-
-
 ;;;; Marking
 
 
-(defun treesitedit-mark-sexp (&optional arg)
+(defun treesitedit-mark-sexp ()
   "Mark and select the current node around point.
 
 If region is active, extend the selection.
 
-Use `exchange-point-and-mark' (bound to C-x C-x by default) to
-reverse the direction in which selection is growing.
+Use `exchange-point-and-mark' to reverse the direction in which
+selection is growing.
 
 Inspired by meow-edit/meow and magnars/expand-region."
-  (interactive "P")
+  (interactive)
   (cond
    ((region-active-p)
     (if (> (point) (mark))
         (treesitedit-forward)
       (treesitedit-backward)))
    (t
-    (let ((n (treesitedit--topmost-node-starting-at (point))))
+    (let ((n (treesitedit--current-node)))
       (set-mark (treesit-node-start n))
       (goto-char (treesit-node-end n))))))
 
@@ -273,6 +226,7 @@ Inspired by meow-edit/meow and magnars/expand-region."
 
 
 (defun treesitedit-kill-sexp (&optional arg)
+  "Kill from point to ARG nodes forward."
   (interactive "P")
   (let ((p0 (point)))
     (treesitedit-forward (or arg 1))
@@ -298,9 +252,9 @@ Inspired by meow-edit/meow and magnars/expand-region."
 
 ;;;###autoload
 (define-minor-mode treesitedit-mode
-  "Minor mode for enabling Paredit-like movement commands for
-buffers that use treesitter to accurately understand the
-language-specific parse tree." )
+  "Minor mode for enabling Paredit-like movement commands.
+
+Uses treesitter to accurately understand the parse tree." )
 
 
 (provide 'treesitedit)
