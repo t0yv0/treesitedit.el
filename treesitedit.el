@@ -140,19 +140,21 @@ SIGNED-LEVELS tells how many levels to go up or down, sign
 indicates forward or back.
 
 VERTICAL-DIRECTION tells to go down if negative, up if positive."
-  (let ((dx (if (> signed-levels 0) +1 -1))
-        (dy (if (< vertical-direction 0) +1 -1))
-        (cn (treesitedit--current-node))
-        (nn nil))
+  (let* ((dx (if (> signed-levels 0) +1 -1))
+         (dy (if (< vertical-direction 0) +1 -1))
+         (sn (treesitedit--current-node))
+         (cn sn)
+         (nn nil))
     (dotimes (_ (abs signed-levels))
       (setq nn (treesitedit--diagonal-node-move cn dx dy))
       (when nn
         (setq cn nn)))
-    (goto-char
-     (if (equal dx dy)
+    (unless (treesit-node-eq sn cn)
+      (goto-char
+       (if (equal dx dy)
          (treesit-node-start cn)
-       (treesit-node-end cn)))
-    (treesitedit--set-current-node cn)))
+         (treesit-node-end cn)))
+      (treesitedit--set-current-node cn))))
 
 
 (defun treesitedit--diagonal-node-move (node dx dy)
