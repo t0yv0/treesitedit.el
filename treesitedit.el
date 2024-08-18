@@ -88,11 +88,11 @@ Repeat (abs DX) times."
       (or
        (and (> (treesit-node-end node) (point)) node)
        (treesit-node-next-sibling node)
-       (treesit-node-parent node))
+       (treesitedit--node-parent node))
     (or
      (and (< (treesit-node-start node) (point)) node)
      (treesit-node-prev-sibling node)
-     (treesit-node-parent node))))
+     (treesitedit--node-parent node))))
 
 
 ;;;; Motion: diagonals
@@ -167,8 +167,8 @@ Positive DY: down, negative: up."
     (while moving
       ;; try to move vertically
       (setq nn (if (> dy 0)
-                   (treesit-node-child n (if (> dx 0) 0 -1))
-                 (treesit-node-parent n)))
+                   (treesitedit--node-child n (if (> dx 0) 0 -1))
+                 (treesitedit--node-parent n)))
       ;; success terminates the loop
       (when nn
         (setq fn nn)
@@ -196,6 +196,37 @@ If none is found, returns the current node at POS."
                             (lambda (p)
                               (equal (treesit-node-start p) pos)))
       (treesit-node-at pos)))
+
+
+;;;; Generalized parent-child relation
+
+
+(defun treesitedit--nodes-overlap-p (n1 n2)
+  "Check if N1 and N2 nodes manage the same region."
+  (and n1 n2
+       (equal (treesit-node-start n1)
+              (treesit-node-start n2))
+       (equal (treesit-node-end n1)
+              (treesit-node-end n2))))
+
+
+(defun treesitedit--node-parent (node)
+  "Find closest non-overlapping parent of NODE."
+  (treesit-parent-until
+   node
+   (lambda (p)
+     (not
+      (treesitedit--nodes-overlap-p p node)))))
+
+
+(defun treesitedit--node-child (node ix)
+  "Find child IX of NODE skipping overlapping nodes."
+  (let ((n node))
+    (while (treesitedit--nodes-overlap-p
+            n
+            (treesit-node-child n 0))
+      (setq n (treesit-node-child n 0)))
+    (treesit-node-child n ix)))
 
 
 ;;;; Marking
