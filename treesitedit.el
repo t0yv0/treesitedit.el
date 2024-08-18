@@ -143,8 +143,19 @@ VERTICAL-DIRECTION tells to go down if negative, up if positive."
   (let* ((dx (if (> signed-levels 0) +1 -1))
          (dy (if (< vertical-direction 0) +1 -1))
          (sn (treesitedit--current-node))
-         (cn sn)
+         (cn nil)
          (nn nil))
+    ;; avoid forward-down motion snapping back
+    (when (and (> dy 0) (> dx 0)
+               (equal (point) (treesit-node-end sn))
+               (treesit-node-next-sibling sn))
+      (setq sn (treesit-node-next-sibling sn)))
+    ;; avoid backward-down motion snapping forward
+    (when (and (> dy 0) (< dx 0)
+               (equal (point) (treesit-node-start sn))
+               (treesit-node-prev-sibling sn))
+      (setq sn (treesit-node-prev-sibling sn)))
+    (setq cn sn)
     (dotimes (_ (abs signed-levels))
       (setq nn (treesitedit--diagonal-node-move cn dx dy))
       (when nn
