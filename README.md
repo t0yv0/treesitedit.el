@@ -4,41 +4,102 @@
 
 This package is under development. The author is using it for editing Go with some occasional TypeScript and Python.
 
-If you are looking for something more mature, try [mickeynp/combobulate](https://github.com/mickeynp/combobulate).
-
 ## Usage
 
-### Motion
+```emacs-lisp
+(require 'treesitedit)
+(treesitedit-mode)
+```
 
-Following paredit three motion pairs are available:
+### Moving up and down
 
-1. Moving over nodes forward and backward:
+Use `C-M-u` and `C-M-d` to move the current node up and down the tree. Unlike LISP, languages like Go may have several
+levels of nodes starting at the same location. Consider the following program, and imagine that point is at the
+beginning of `return` (marked with `v`), and the current node is `return m.n*i + j` (marked with `^---^`).
 
-    ```
-    C-M-b treesitedit-backward         C-M-f treesitedit-forward
-    ```
+``` go
+func (m *matrix) index(i, j int) int {
+    v
+	return m.n*i + j
+    ^--------------^
+}
+```
 
-2. Moving back and up out of nodes and forward down into nodes:
+Pressing `C-M-d` goes down without moving point, giving:
 
-    ```
-    C-M-u treesitedit-backward-up      C-M-d treesitedit-forward-down
-    ```
+``` go
+func (m *matrix) index(i, j int) int {
+//  v
+	return m.n*i + j
+//  ^----^
+}
+```
 
-3. Moving forward and out of nodes and backwards down into nodes. These are slightly less intuitive but appear useful.
-   Following paredit these replace the traditional Emacs bindings for forward-list and backward-list:
+To give some visual feedback, `treesitedit` will flash the current node.
 
-    ```
-    C-M-p treesitedit-backward-down    C-M-n treesitedit-forward-up
-    ```
+### Moving forward and backward
 
-The key design difficulty for languages like Go is that unlike in LISP, a single buffer position corresponds to multiple
-nodes. For example, having point at the `f` of `func` has several overlapping nodes such as the `func` literal and the
-entire function definition. The motion commands takes a guess which node to operate on, generally picking the mode with
-the widest extent.
+Horizontal motion is accomplished with the forward and backward commands:
+
+```
+C-M-b treesitedit-backward
+C-M-f treesitedit-forward
+```
+
+This motion steps over the nodes at the current level. For example:
+
+``` go
+func (m *matrix) index(i, j int) int {
+//  v
+	return m.n*i + j
+//  ^--------------^
+}
+```
+
+In this position, `C-M-f` jump over the current node and move point to its end:
+
+``` go
+func (m *matrix) index(i, j int) int {
+//                  v
+	return m.n*i + j
+//  ^--------------^
+}
+```
+
+To move point to the end of the `return` keyword, the user might want to go down a level `C-M-d` first and then perform
+`C-M-f` at that level.
+
+### Moving diagonally
+
+The up and down commands explained earlier are actually part of the family of four diagonal motion commands:
+
+```
+C-M-u treesitedit-backward-up
+C-M-d treesitedit-forward-down
+C-M-p treesitedit-backward-down
+C-M-n treesitedit-forward-up
+```
+
+These commands will always move up or down a level, and they may also move horizontally if needed.
+
+The naming and behavior of these commands follow [Paredit](https://paredit.org) as closely as possible, with the big
+difference of having to track the current node and accommodate moves that change it without moving point.
+
+[The Animated Guide to Paredit](http://danmidwood.com/content/2014/11/21/animated-paredit.html) is a great illustration
+of the concept in the LISP original.
 
 ### Marking
 
 Marking design is simple and inspired by [meow](https://github.com/meow-edit/meow) and
 [expand-region](https://github.com/magnars/expand-region.el). `C-M-@` or `C-M-SPC` marks the node around point.
-Subsequently pressing this key extends active region forward. To extend it backward, use `C-x C-x` to
+Subsequently pressing this key extends active region using the forward motion. To extend it backward, use `C-x C-x` to
 `exchange-point-and-mark`.
+
+### Killing
+
+Killing with `C-M-k` is similar to marking with `C-M-SPC` and then killing the region.
+
+## Alternatives
+
+Try [mickeynp/combobulate](https://github.com/mickeynp/combobulate) for more features. The author has not used it since
+it currently is lacking Go support.
