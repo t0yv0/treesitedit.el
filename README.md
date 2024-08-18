@@ -19,9 +19,9 @@ beginning of `return` (marked with `v`), and the current node is `return m.n*i +
 
 ``` go
 func (m *matrix) index(i, j int) int {
-    v
-	return m.n*i + j
-    ^--------------^
+//  v
+    return m.n*i + j
+//  ^--------------^
 }
 ```
 
@@ -30,7 +30,7 @@ Pressing `C-M-d` goes down without moving point, giving:
 ``` go
 func (m *matrix) index(i, j int) int {
 //  v
-	return m.n*i + j
+    return m.n*i + j
 //  ^----^
 }
 ```
@@ -51,7 +51,7 @@ This motion steps over the nodes at the current level. For example:
 ``` go
 func (m *matrix) index(i, j int) int {
 //  v
-	return m.n*i + j
+    return m.n*i + j
 //  ^--------------^
 }
 ```
@@ -61,7 +61,7 @@ In this position, `C-M-f` jump over the current node and move point to its end:
 ``` go
 func (m *matrix) index(i, j int) int {
 //                  v
-	return m.n*i + j
+    return m.n*i + j
 //  ^--------------^
 }
 ```
