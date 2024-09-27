@@ -20,9 +20,9 @@
   (let ((go-rx (rx bol (or "function_declaration"
                            "func_literal"
                            "for_statement"
+                           "if_statement"
                            "method_declaration"
                            "return_statement"
-                           "short_var_declaration"
                            "type_declaration")
                    eol)))
     `((go-mode . ,go-rx)
