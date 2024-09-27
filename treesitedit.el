@@ -17,10 +17,16 @@
 
 
 (defcustom treesitedit-block-nodes
-  `((go-mode . ,(rx bol (or "function_declaration"
-                            "for_statement"
-                            "type_declaration")
-                    eol)))
+  (let ((go-rx (rx bol (or "function_declaration"
+                           "func_literal"
+                           "for_statement"
+                           "method_declaration"
+                           "return_statement"
+                           "short_var_declaration"
+                           "type_declaration")
+                   eol)))
+    `((go-mode . ,go-rx)
+      (go-ts-mode . ,go-rx)))
   "Define which treesitter nodes are considered to be block nodes by mode."
   :type 'custom
   :group 'treesitedit)
@@ -81,9 +87,9 @@ Negating the ARG reverses the direction to move backwards."
 (defun treesitedit--forward-list-1 ()
   "Implement one step of forward motion."
   (pcase (treesitedit--position)
-    (`(before-first ,c _)
+    (`(before-first ,c ,_)
      (goto-char (treesit-node-end c)))
-    (`(between _ ,c2 _)
+    (`(between ,_ ,c2 ,_)
      (goto-char (treesit-node-end c2)))
     (_
      (message "%s" "No next group"))))
@@ -92,9 +98,9 @@ Negating the ARG reverses the direction to move backwards."
 (defun treesitedit--backward-list-1 ()
   "Implement one step of backward motion."
   (pcase (treesitedit--position)
-    (`(between ,c1 _ _)
+    (`(between ,c1 ,_ ,_)
      (goto-char (treesit-node-start c1)))
-    (`(after-last ,c _)
+    (`(after-last ,c ,_)
      (goto-char (treesit-node-start c)))
     (_
      (message "%s" "No previous group"))))
@@ -103,9 +109,9 @@ Negating the ARG reverses the direction to move backwards."
 (defun treesitedit--backward-down-list-1 ()
   "Implement one step of backward-down motion."
   (let ((n (pcase (treesitedit--position)
-             (`(between ,c1 _ _) c1)
-             (`(after-last ,c _) c)
-             (_ (message "%s" "At bottom level")))))
+             (`(between ,c1 ,_ ,_) c1)
+             (`(after-last ,c ,_) c)
+             (_ (error "%s" "At bottom level")))))
     (let ((cc (treesitedit--children n)))
       (if (null cc)
           (message "%s" "At bottom level")
@@ -116,9 +122,9 @@ Negating the ARG reverses the direction to move backwards."
   "Implement one step of forward-down motion."
   (let ((n
          (pcase (treesitedit--position)
-           (`(before-first ,c _) c)
-           (`(between _ ,c2 _) c2)
-           (_ (message "%s" "At bottom level")))))
+           (`(before-first ,c ,_) c)
+           (`(between ,_ ,c2 ,_) c2)
+           (_ (error "%s" "At bottom level")))))
     (let ((cc (treesitedit--children n)))
       (if (null cc)
           (message "%s" "At bottom level")
@@ -195,7 +201,7 @@ children."
   "Find current block parent node."
   (let ((x (point)))
     (treesit-parent-until
-     (treesit-node-at (point))
+     (treesit-node-at x)
      (lambda (n)
        (and (> x (treesit-node-start n))
             (< x (treesit-node-end n))
@@ -213,7 +219,7 @@ Repeat ARG times.
 Behave like `treesitedit-forward' if ARG is negative."
   (interactive "P")
   (setq arg (or (if (equal arg '-) -1 arg) 1))
-  (treesitedit--move arg))
+  (treesitedit--move (- arg)))
 
 
 (defun treesitedit-forward (&optional arg)
@@ -237,6 +243,7 @@ Repeat (abs DX) times."
         (next-point nil))
     (while (> remaining-moves 0)
       (setq nn (treesitedit--node-move cn dx))
+      (message (format "moved to %s" nn))
       (if (null nn)
           (setq remaining-moves 0)
         (setq cn nn)
