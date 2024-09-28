@@ -36,7 +36,7 @@ such as statements like `for {}` or parenthesized expressions `(1 + 2)` in Go as
 Each language can define which nodes are considered "blocky" by customizing `treesitedit-block-nodes`. Some care must be
 taken to ensure that these nodes are not overlapping. For example, expressions wrapped in `()` or `""` are guaranteed to
 not overlap, but `expression_statement` may overlap `argument_list`. If overlapping nodes are marked as blocky, moving
-over them is no longer symmetrical as the system is may get confused as to which node is "current." It is not a huge
+over them is no longer symmetrical as the system may get confused as to which node is "current." It is not a huge
 problem on occasion but is best avoided if possible.
 
 When tweaking the language support, `treesit-explore-mode` is invaluable to understand the representation.
