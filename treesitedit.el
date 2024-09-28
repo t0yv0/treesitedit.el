@@ -269,16 +269,6 @@ Repeat (abs DX) times."
    (t (treesit-search-forward node (lambda (n) t) (< dx 0) 'all))))
 
 
-(defun treesitedit--topmost-node-starting-at (pos)
-  "Find the top-most node starting at POS position.
-
-If none is found, returns the current node at POS."
-  (or (treesit-parent-while (treesit-node-at pos)
-                            (lambda (p)
-                              (equal (treesit-node-start p) pos)))
-      (treesit-node-at pos)))
-
-
 ;;;; Marking
 
 
@@ -292,15 +282,13 @@ selection is growing.
 
 Inspired by meow-edit/meow and magnars/expand-region."
   (interactive)
-  (cond
-   ((region-active-p)
-    (if (> (point) (mark))
-        (treesitedit-forward)
-      (treesitedit-backward)))
-   (t
-    (let ((n (treesitedit--topmost-node-starting-at (point))))
-      (set-mark (treesit-node-start n))
-      (goto-char (treesit-node-end n))))))
+  (let ((f (if (and (region-active-p)
+                    (< (point) (mark)))
+               'treesitedit-backward-list
+             'treesitedit-forward-list)))
+    (unless (region-active-p)
+      (set-mark (treesit-node-start (treesit-node-at (point)))))
+    (call-interactively f)))
 
 
 ;;;; Killing (terrible legacy Emacs term)
