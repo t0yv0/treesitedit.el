@@ -11,19 +11,26 @@
 ;;;; Moving in the Block Node Tree Structure
 ;;;;
 ;;;; The four motions mimic built-in Moving by Parentheses motions. Instead of groups of balanced parentheses, they
-;;;; operate on block nodes. Each language defines which treesitter nodes are considered block nodes.
+;;;; operate on block nodes. Each language defines which treesitter nodes are blocks.
 ;;;;
 ;;;; https://www.gnu.org/software/emacs/manual/html_node/emacs/Moving-by-Parens.html
 
 
 (defcustom treesitedit-block-nodes
-  (let ((go-rx (rx bol (or "function_declaration"
-                           "func_literal"
-                           "for_statement"
-                           "if_statement"
-                           "method_declaration"
-                           "return_statement"
-                           "type_declaration")
+  (let ((go-rx (rx bol (or
+                        "argument_list"
+                        "assignment_statement"
+                        "expression_statement"
+                        "for_statement"
+                        "func_literal"
+                        "function_declaration"
+                        "if_statement"
+                        "interpreted_string_literal"
+                        "method_declaration"
+                        "return_statement"
+                        "short_var_declaration"
+                        "type_declaration"
+                        "var_declaration")
                    eol)))
     `((go-mode . ,go-rx)
       (go-ts-mode . ,go-rx)))
@@ -237,13 +244,12 @@ Behave like `treesitedit-backward' if ARG is negative."
   "Move forward if DX is positive and backward otherwise.
 
 Repeat (abs DX) times."
-  (let ((cn (treesitedit--topmost-node-starting-at (point)))
+  (let ((cn (treesit-node-at (point)))
         (nn nil)
         (remaining-moves (abs dx))
         (next-point nil))
     (while (> remaining-moves 0)
       (setq nn (treesitedit--node-move cn dx))
-      (message (format "moved to %s" nn))
       (if (null nn)
           (setq remaining-moves 0)
         (setq cn nn)
@@ -257,15 +263,10 @@ Repeat (abs DX) times."
 
 (defun treesitedit--node-move (node dx)
   "Compute the next node after NODE in DX direction."
-  (if (> dx 0)
-      (or
-       (and (> (treesit-node-end node) (point)) node)
-       (treesit-node-next-sibling node)
-       (treesit-node-parent node))
-    (or
-     (and (< (treesit-node-start node) (point)) node)
-     (treesit-node-prev-sibling node)
-     (treesit-node-parent node))))
+  (cond
+   ((and (> dx 0) (< (treesit-node-end node) (point))) node)
+   ((and (< dx 0) (> (treesit-node-start node) (point))) node)
+   (t (treesit-search-forward node (lambda (n) t) (< dx 0) 'all))))
 
 
 (defun treesitedit--topmost-node-starting-at (pos)
