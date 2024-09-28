@@ -62,6 +62,3 @@ Killing with `C-M-k` is similar to marking with `C-M-SPC` and then killing the r
 
 - [Paredit](https://paredit.org) is an inspiration for LISP editing motions.
   See also [The Animated Guide to Paredit](http://danmidwood.com/content/2014/11/21/animated-paredit.html)
-
-  Translating Paredit directly to Algol-style languages is challenging because POINT can correspond to more than one
-  node in the syntax tree.
