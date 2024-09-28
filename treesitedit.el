@@ -298,7 +298,7 @@ Inspired by meow-edit/meow and magnars/expand-region."
   "Kill from point to ARG nodes forward."
   (interactive "P")
   (let ((p0 (point)))
-    (treesitedit-forward (or arg 1))
+    (treesitedit-forward-list (or arg 1))
     (kill-region p0 (point))))
 
 
