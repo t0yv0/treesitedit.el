@@ -13,7 +13,7 @@ Minor mode for making editing motions better with treesitter.
 
 #### By Expression
 
-Moving by forward and backward by expression rebinds `forward-sexp` and `backward-sexp` (see [Expressions with Balanced
+Moving forward and backward by expression rebinds `forward-sexp` and `backward-sexp` (see [Expressions with Balanced
 Parentheses](https://www.gnu.org/software/emacs/manual/html_node/emacs/Expressions.html)) which are typically bound to
 `C-M-f` and `C-M-b`. The treesitter-enabled motion is very similar but more precise. One intentional difference is that
 it ignores hierarchies, blocks and parentheses. It behaves a bit more like `forward-word` than `forward-sexp`.
