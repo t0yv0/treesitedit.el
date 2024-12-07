@@ -20,5 +20,11 @@ jobs:
 
       - uses: DeterminateSystems/magic-nix-cache-action@v8
 
+      - name: build
+        run: nix build
+
+      - name: log
+        run: nix log ./result
+
       - name: test
         run: nix develop --command make test
