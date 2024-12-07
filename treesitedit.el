@@ -266,7 +266,7 @@ Repeat (abs DX) times."
   (cond
    ((and (> dx 0) (< (treesit-node-end node) (point))) node)
    ((and (< dx 0) (> (treesit-node-start node) (point))) node)
-   (t (treesit-search-forward node (lambda (n) t) (< dx 0) 'all))))
+   (t (treesit-search-forward node (lambda (_) t) (< dx 0) 'all))))
 
 
 ;;;; Marking

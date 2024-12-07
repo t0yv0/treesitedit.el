@@ -1,0 +1,44 @@
+Name: down-list-into-func
+=-=
+package tests
+
+import "testing"
+
+^func TestX(t *testing.T) {
+	cases := []struct{
+		Name string
+		Expect any
+	}{
+		{
+			"test1",
+			"expect1",
+		},
+		{
+			"test2",
+			"expect2",
+		},
+	}
+	t.Logf("cases: %d", len(cases))
+}
+=-=
+package tests
+
+import "testing"
+
+func TestX(t *testing.T) {
+	^cases := []struct{
+		Name string
+		Expect any
+	}{
+		{
+			"test1",
+			"expect1",
+		},
+		{
+			"test2",
+			"expect2",
+		},
+	}
+	t.Logf("cases: %d", len(cases))
+}
+=-=-=

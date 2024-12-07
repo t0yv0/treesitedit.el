@@ -25,12 +25,31 @@
       default = treesitedit;
     };
 
+    devShells = nixpkgs: sys: emacs-flavor: let
+      pkgs = import nixpkgs { system = sys; };
+      emacs = emacs-flavor pkgs;
+
+      devShell = pkgs.mkShell {
+        buildInputs = [ emacs ];
+      };
+
+    in {
+      default = devShell;
+    };
+
   in {
     packages = {
       "x86_64-darwin" = packages nixpkgs_darwin "x86_64-darwin"  (pkgs: pkgs.emacs29-macport);
       "aarch64-darwin" = packages nixpkgs_darwin "aarch64-darwin" (pkgs: pkgs.emacs29-macport);
       "x86_64-linux" = packages nixpkgs "x86_64-linux" (pkgs: pkgs.emacs29);
       "aarch64-linux" = packages nixpkgs "aarch64-linux" (pkgs: pkgs.emacs29);
+    };
+
+    devShells = {
+      "x86_64-darwin" = devShells nixpkgs_darwin "x86_64-darwin"  (pkgs: pkgs.emacs29-macport);
+      "aarch64-darwin" = devShells nixpkgs_darwin "aarch64-darwin" (pkgs: pkgs.emacs29-macport);
+      "x86_64-linux" = devShells nixpkgs "x86_64-linux" (pkgs: pkgs.emacs29);
+      "aarch64-linux" = devShells nixpkgs "aarch64-linux" (pkgs: pkgs.emacs29);
     };
   };
 }
