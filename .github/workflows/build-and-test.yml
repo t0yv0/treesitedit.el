@@ -7,10 +7,9 @@ on:
       - main
 
 jobs:
-  test:
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
-
       - uses: actions/checkout@v4
 
       - uses: cachix/install-nix-action@v27
