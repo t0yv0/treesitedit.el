@@ -27,10 +27,32 @@
 
     devShells = nixpkgs: sys: emacs-flavor: let
       pkgs = import nixpkgs { system = sys; };
+
       emacs = emacs-flavor pkgs;
 
+      treesitter-grammars = pkgs.tree-sitter.withPlugins (p: [
+            p.tree-sitter-go
+            p.tree-sitter-gomod
+      ]);
+
+      homedir = pkgs.stdenv.mkDerivation {
+          name = "homedir";
+          phases = [ "installPhase" ];
+          installPhase = ''
+            mkdir -p $out/.emacs.d/tree-sitter
+            cp ${treesitter-grammars}/go.so    $out/.emacs.d/tree-sitter/libtree-sitter-go.so
+            cp ${treesitter-grammars}/gomod.so $out/.emacs.d/tree-sitter/libtree-sitter-gmod.so
+          '';
+      };
+
       devShell = pkgs.mkShell {
-        buildInputs = [ emacs ];
+        buildInputs = [
+          emacs
+          homedir
+        ];
+        shellHook = ''
+          export HOME=${homedir}
+        '';
       };
 
     in {
