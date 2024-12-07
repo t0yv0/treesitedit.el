@@ -41,7 +41,7 @@
           installPhase = ''
             mkdir -p $out/.emacs.d/tree-sitter
             cp ${treesitter-grammars}/go.so    $out/.emacs.d/tree-sitter/libtree-sitter-go.so
-            cp ${treesitter-grammars}/gomod.so $out/.emacs.d/tree-sitter/libtree-sitter-gmod.so
+            cp ${treesitter-grammars}/gomod.so $out/.emacs.d/tree-sitter/libtree-sitter-gomod.so
           '';
       };
 
