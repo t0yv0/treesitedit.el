@@ -1,0 +1,32 @@
+Name: forward-list-over-map
+=-=
+package main
+
+func test() {
+	m1 := ^map[string]string{
+		"a": "1",
+		"b": "2",
+		"c": "3",
+	}
+	m2 := map[string]string{
+		"a": "1",
+		"b": "3",
+		"d": "2",
+	}
+}
+=-=
+package main
+
+func test() {
+	m1 := map[string]string{
+		"a": "1",
+		"b": "2",
+		"c": "3",
+	}^
+	m2 := map[string]string{
+		"a": "1",
+		"b": "3",
+		"d": "2",
+	}
+}
+=-=-=

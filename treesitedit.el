@@ -21,6 +21,7 @@
                         "argument_list"
                         "assignment_statement"
                         "expression_statement"
+                        "composite_literal"
                         "for_statement"
                         "func_literal"
                         "function_declaration"
