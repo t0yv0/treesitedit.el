@@ -1,6 +1,9 @@
+![build-and-test.yml](https://github.com/t0yv0/treesitedit.el/actions/workflows/build-and-test.yml/badge.svg)
+
 # treesitedit.el
 
 Minor mode for making editing motions better with treesitter.
+
 
 ## Usage
 
