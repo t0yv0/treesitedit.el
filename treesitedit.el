@@ -54,8 +54,10 @@ the direction of motion."
   (setq arg (or (if (equal arg '-) -1 arg) 1))
   (dotimes (_ (abs arg))
     (if (> arg 0)
-        (treesitedit--forward-list-1)
-      (treesitedit--backward-list-1))))
+        (unless (treesitedit--forward-list-1)
+          (message "No next group"))
+      (unless (treesitedit--backward-list-1)
+        (message "No previous group")))))
 
 
 (defun treesitedit-backward-list (arg)
@@ -64,8 +66,10 @@ the direction of motion."
   (setq arg (or (if (equal arg '-) -1 arg) 1))
   (dotimes (_ (abs arg))
     (if (> arg 0)
-        (treesitedit--backward-list-1)
-      (treesitedit--forward-list-1))))
+        (unless (treesitedit--backward-list-1)
+          (message "No previous group"))
+      (unless (treesitedit--forward-list-1)
+        (message "No next group")))))
 
 
 (defun treesitedit-backward-up-list (arg)
@@ -97,22 +101,26 @@ Negating the ARG reverses the direction to move backwards."
   "Implement one step of forward motion."
   (pcase (treesitedit--position)
     (`(before-first ,c ,_)
-     (goto-char (treesit-node-end c)))
+     (goto-char (treesit-node-end c))
+     t)
     (`(between ,_ ,c2 ,_)
-     (goto-char (treesit-node-end c2)))
+     (goto-char (treesit-node-end c2))
+     t)
     (_
-     (message "%s" "No next group"))))
+     nil)))
 
 
 (defun treesitedit--backward-list-1 ()
   "Implement one step of backward motion."
   (pcase (treesitedit--position)
     (`(between ,c1 ,_ ,_)
-     (goto-char (treesit-node-start c1)))
+     (goto-char (treesit-node-start c1))
+     t)
     (`(after-last ,c ,_)
-     (goto-char (treesit-node-start c)))
+     (goto-char (treesit-node-start c))
+     t)
     (_
-     (message "%s" "No previous group"))))
+     nil)))
 
 
 (defun treesitedit--backward-down-list-1 ()
