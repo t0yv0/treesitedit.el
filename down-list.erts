@@ -1,44 +1,40 @@
 Name: down-list-into-func
 =-=
-package tests
+package main
 
-import "testing"
+^func f() {}
+=-=
+package main
 
-^func TestX(t *testing.T) {
-	cases := []struct{
-		Name string
-		Expect any
-	}{
-		{
-			"test1",
-			"expect1",
-		},
-		{
-			"test2",
-			"expect2",
-		},
-	}
-	t.Logf("cases: %d", len(cases))
+func^ f() {}
+=-=-=
+
+
+Name: down-list-into-params
+=-=
+package main
+
+func^ f() {}
+=-=
+package main
+
+func f(^) {}
+=-=-=
+
+
+Name: down-list-into-conditional
+=-=
+package main
+
+func f(cond bool)^ {
+     if cond {
+     }
 }
 =-=
-package tests
+package main
 
-import "testing"
-
-func TestX(t *testing.T) {
-	^cases := []struct{
-		Name string
-		Expect any
-	}{
-		{
-			"test1",
-			"expect1",
-		},
-		{
-			"test2",
-			"expect2",
-		},
-	}
-	t.Logf("cases: %d", len(cases))
+func f(cond bool) {
+     if^ cond {
+     }
 }
 =-=-=

@@ -28,6 +28,7 @@
                         "if_statement"
                         "interpreted_string_literal"
                         "method_declaration"
+                        "parameter_list"
                         "return_statement"
                         "short_var_declaration"
                         "type_declaration"
@@ -133,10 +134,8 @@ Negating the ARG reverses the direction to move backwards."
            (`(before-first ,c ,_) c)
            (`(between ,_ ,c2 ,_) c2)
            (_ (error "%s" "At bottom level")))))
-    (let ((cc (treesitedit--children n)))
-      (if (null cc)
-          (message "%s" "At bottom level")
-        (goto-char (treesit-node-start (car cc)))))))
+    (goto-char (treesit-node-start n))
+    (treesitedit--forward-1)))
 
 
 (defun treesitedit--backward-up-list-1 ()
@@ -167,25 +166,31 @@ The last case indicates that the parent node has no block node
 children."
   (let ((p (treesitedit--parent))
         (x (point))
-        (c1 nil)
-        (c2 nil))
+        (ch nil)
+        (ix nil))
     (if (null p) nil
-      (dolist (cc (treesitedit--children p))
-        (when (treesitedit--block-p cc)
-          (when (>= x (treesit-node-end cc))
-            (setq c1 cc))
-          (when (and (<= x (treesit-node-start cc))
-                     (null c2))
-            (setq c2 cc))))
+
+      ;; paired blocky children of p
+      (setq ch (seq-filter
+                #'treesitedit--block-p
+                (treesitedit--children p)))
+
+      ;; count nodes preceding point
+      (setq ix (seq-length (seq-take-while (lambda (n)
+                                             (> x (treesit-node-start n)))
+                                           ch)))
       (cond
-       ((and c1 c2)
-        `(between ,c1 ,c2 ,p))
-       ((and (null c1) (null c2))
+       ((null ch)
         `(under ,p))
-       ((null c1)
-        `(before-first ,c2 ,p))
-       ((null c2)
-        `(after-last ,c1 ,p))))))
+       ((equal ix 0)
+        `(before-first ,(seq-first ch) ,p))
+       ((equal ix (seq-length ch))
+        `(after-last ,(seq-elt ch (- ix 1)) ,p))
+       (t
+        `(between
+          ,(seq-elt ch (- ix 1))
+          ,(seq-elt ch ix)
+          ,p))))))
 
 
 (defun treesitedit--block-p (n)
@@ -227,7 +232,10 @@ Repeat ARG times.
 Behave like `treesitedit-forward' if ARG is negative."
   (interactive "P")
   (setq arg (or (if (equal arg '-) -1 arg) 1))
-  (treesitedit--move (- arg)))
+  (dotimes (_ (abs arg))
+    (if (< arg 0)
+        (treesitedit--forward-1)
+      (treesitedit--backward-1))))
 
 
 (defun treesitedit-forward (&optional arg)
@@ -238,36 +246,55 @@ Repeat ARG times.
 Behave like `treesitedit-backward' if ARG is negative."
   (interactive "P")
   (setq arg (or (if (equal arg '-) -1 arg) 1))
-  (treesitedit--move arg))
+  (dotimes (_ (abs arg))
+    (if (> arg 0)
+        (treesitedit--forward-1)
+      (treesitedit--backward-1))))
 
 
-(defun treesitedit--move (dx)
-  "Move forward if DX is positive and backward otherwise.
+(defun treesitedit--forward-1 ()
+  "One step forward."
+  (let* ((p (point))
+         (cn (treesit-node-at p))
+         (nn nil))
+    (cond
+     ((and (> (treesit-node-end cn) p)
+           (not (treesitedit--whitespace-nodep cn)))
+      (goto-char (treesit-node-end cn)))
+     (t
+      (setq nn (treesit-search-forward
+                cn (lambda (x)
+                     (and
+                      (not (treesitedit--whitespace-nodep x))
+                      (> (treesit-node-end x) p)))
+                nil 'all))
+      (when nn
+        (goto-char (treesit-node-end nn)))))))
 
-Repeat (abs DX) times."
-  (let ((cn (treesit-node-at (point)))
-        (nn nil)
-        (remaining-moves (abs dx))
-        (next-point nil))
-    (while (> remaining-moves 0)
-      (setq nn (treesitedit--node-move cn dx))
-      (if (null nn)
-          (setq remaining-moves 0)
-        (setq cn nn)
-        (setq next-point (if (< dx 0)
-                             (treesit-node-start cn)
-                           (treesit-node-end cn)))
-        (when (not (equal next-point (point)))
-          (goto-char next-point)
-          (setq remaining-moves (- remaining-moves 1)))))))
+
+(defun treesitedit--backward-1 ()
+  "One step backward."
+  (let* ((p (point))
+         (cn (treesit-node-at p))
+         (nn nil))
+    (cond
+     ((and (< (treesit-node-start cn) p)
+           (not (treesitedit--whitespace-nodep cn)))
+      (goto-char (treesit-node-start cn)))
+     (t
+      (setq nn (treesit-search-forward
+                cn (lambda (x)
+                     (and
+                      (not (treesitedit--whitespace-nodep x))
+                      (< (treesit-node-start x) p)))
+                'backward 'all))
+      (when nn
+        (goto-char (treesit-node-start nn)))))))
 
 
-(defun treesitedit--node-move (node dx)
-  "Compute the next node after NODE in DX direction."
-  (cond
-   ((and (> dx 0) (< (treesit-node-end node) (point))) node)
-   ((and (< dx 0) (> (treesit-node-start node) (point))) node)
-   (t (treesit-search-forward node (lambda (_) t) (< dx 0) 'all))))
+(defun treesitedit--whitespace-nodep (node)
+  "Check if NODE is a white-space node."
+  (equal "" (string-clean-whitespace (treesit-node-type node))))
 
 
 ;;;; Marking
