@@ -318,13 +318,15 @@ selection is growing.
 
 Inspired by meow-edit/meow and magnars/expand-region."
   (interactive)
-  (let ((f (if (and (region-active-p)
-                    (< (point) (mark)))
-               'treesitedit-backward-list
-             'treesitedit-forward-list)))
+  (let ((backward (and (region-active-p)
+                       (< (point) (mark)))))
     (unless (region-active-p)
       (set-mark (treesit-node-start (treesit-node-at (point)))))
-    (call-interactively f)))
+    (if backward
+        (unless (treesitedit--backward-list-1)
+          (treesitedit--backward-1))
+      (unless (treesitedit--forward-list-1)
+        (treesitedit--forward-1)))))
 
 
 ;;;; Killing (terrible legacy Emacs term)
