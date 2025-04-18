@@ -1,77 +1,60 @@
 {
   inputs = {
-    nixpkgs.url = github:NixOS/nixpkgs/nixos-23.11;
-    nixpkgs_darwin.url = github:NixOS/nixpkgs/nixpkgs-23.11-darwin;
+    nixpkgs.url = github:NixOS/nixpkgs/nixos-24.11;
+    flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, nixpkgs_darwin }: let
+  outputs = { self, nixpkgs, flake-utils }: let
 
     version = self.rev or "dirty";
 
-    packages = nixpkgs: sys: emacs-flavor: let
-      pkgs = import nixpkgs { system = sys; };
-      epkgs = pkgs.emacsPackagesFor (emacs-flavor pkgs);
-
-      treesitedit = epkgs.elpaBuild {
-        pname = "treesitedit";
-        ename = "treesitedit";
-        version = version;
-        src = [ ./treesitedit.el ];
-        packageRequires = [];
-        meta = {};
+    overlay = final: prev: {
+      treesitedit = final.callPackage ./package.nix {
+        inherit version;
+        epkgs = final.emacsPackagesFor final.emacs;
       };
+    };
 
+    # https://github.com/NixOS/nixpkgs/issues/395169
+    emacs-overlay = final: prev: {
+      emacs = prev.emacs.override { withNativeCompilation = false; };
+    };
+
+    treesitter-grammars = pkgs: pkgs.tree-sitter.withPlugins (p: [
+      p.tree-sitter-go
+      p.tree-sitter-gomod
+    ]);
+
+    homedir = pkgs: pkgs.stdenv.mkDerivation {
+      name = "homedir";
+      phases = [ "installPhase" ];
+      installPhase = let g = treesitter-grammars pkgs; in ''
+        mkdir -p $out/.emacs.d/tree-sitter
+        cp ${g}/go.so    $out/.emacs.d/tree-sitter/libtree-sitter-go.so
+        cp ${g}/gomod.so $out/.emacs.d/tree-sitter/libtree-sitter-gomod.so
+      '';
+    };
+
+    devsh = pkgs: let h = homedir pkgs; in pkgs.mkShell {
+      buildInputs = [
+        pkgs.emacs
+        h
+      ];
+      shellHook = ''
+        export HOME=${h}
+      '';
+    };
+
+    epkgs = pkgs: pkgs.emacsPackagesFor pkgs.emacs;
+
+    out = system: let
+      pkgs = import nixpkgs { inherit system; overlays = [emacs-overlay]; };
     in {
-      default = treesitedit;
+      packages.default = (self.overlays.default pkgs pkgs).treesitedit;
+      devShells.default = devsh pkgs;
     };
 
-    devShells = nixpkgs: sys: emacs-flavor: let
-      pkgs = import nixpkgs { system = sys; };
-
-      emacs = emacs-flavor pkgs;
-
-      treesitter-grammars = pkgs.tree-sitter.withPlugins (p: [
-            p.tree-sitter-go
-            p.tree-sitter-gomod
-      ]);
-
-      homedir = pkgs.stdenv.mkDerivation {
-          name = "homedir";
-          phases = [ "installPhase" ];
-          installPhase = ''
-            mkdir -p $out/.emacs.d/tree-sitter
-            cp ${treesitter-grammars}/go.so    $out/.emacs.d/tree-sitter/libtree-sitter-go.so
-            cp ${treesitter-grammars}/gomod.so $out/.emacs.d/tree-sitter/libtree-sitter-gomod.so
-          '';
-      };
-
-      devShell = pkgs.mkShell {
-        buildInputs = [
-          emacs
-          homedir
-        ];
-        shellHook = ''
-          export HOME=${homedir}
-        '';
-      };
-
-    in {
-      default = devShell;
-    };
-
-  in {
-    packages = {
-      "x86_64-darwin" = packages nixpkgs_darwin "x86_64-darwin"  (pkgs: pkgs.emacs29-macport);
-      "aarch64-darwin" = packages nixpkgs_darwin "aarch64-darwin" (pkgs: pkgs.emacs29-macport);
-      "x86_64-linux" = packages nixpkgs "x86_64-linux" (pkgs: pkgs.emacs29);
-      "aarch64-linux" = packages nixpkgs "aarch64-linux" (pkgs: pkgs.emacs29);
-    };
-
-    devShells = {
-      "x86_64-darwin" = devShells nixpkgs_darwin "x86_64-darwin"  (pkgs: pkgs.emacs29-macport);
-      "aarch64-darwin" = devShells nixpkgs_darwin "aarch64-darwin" (pkgs: pkgs.emacs29-macport);
-      "x86_64-linux" = devShells nixpkgs "x86_64-linux" (pkgs: pkgs.emacs29);
-      "aarch64-linux" = devShells nixpkgs "aarch64-linux" (pkgs: pkgs.emacs29);
-    };
+  in flake-utils.lib.eachDefaultSystem out // {
+    overlays.default = overlay;
   };
 }
